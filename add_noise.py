@@ -74,6 +74,7 @@ def divide_dataset(audio_paths: List[str]) -> Tuple[List[str], List[str], List[s
 
 def add_external_noise(audio_paths: List[str],
                         noise_paths: List[str],
+                        sampling_rate: int,
                         SNR_LEVELS: List[int],
                         output_path: str) -> None:
     """
@@ -99,13 +100,15 @@ def add_external_noise(audio_paths: List[str],
 
         # Load noisy audio file
         sample_noise, _ = librosa.load(noise,
-                            sr=16000,
+                            sr=sampling_rate,
                             mono=True,
                             res_type='kaiser_fast')
 
         # Load clean audio file
         sample_audio, _ = librosa.load(audio_path,
-                                        sr=None)
+                                        sr=sampling_rate,
+                                        mono=True,
+                                        res_type='kaiser_fast')
 
         noise_rms = calculate_rms(sample_noise)
         clean_rms = calculate_rms(sample_audio)
@@ -128,10 +131,11 @@ def add_external_noise(audio_paths: List[str],
 
         augmented_audio = sample_audio + sample_noise
 
-        sf.write(os.path.join(output_path, os.path.basename(audio_path)), augmented_audio, 16000, subtype='PCM_16')
+        sf.write(os.path.join(output_path, os.path.basename(audio_path)), augmented_audio, sampling_rate, subtype='PCM_16')
 
 def add_white_noise(audio_paths: List[str],
                         SNR_LEVELS: List[int],
+                        sampling_rate: int,
                         output_path: str) -> None:
     """
     Adds Gaussian Noise to a clean speech dataset based on pre-defined SNR levels.
@@ -150,7 +154,9 @@ def add_white_noise(audio_paths: List[str],
         SNR = random.choice(SNR_LEVELS)
 
         sample_audio, _ = librosa.load(audio_path,
-                                        sr=None)
+                                        sr=sampling_rate,
+                                        mono=True,
+                                        res_type='kaiser_fast')
 
         clean_rms = calculate_rms(sample_audio)
 
@@ -160,12 +166,13 @@ def add_white_noise(audio_paths: List[str],
 
         augmented_audio = sample_audio + white_noise
 
-        sf.write(os.path.join(output_path, os.path.basename(audio_path)), augmented_audio, 16000, subtype='PCM_16')
+        sf.write(os.path.join(output_path, os.path.basename(audio_path)), augmented_audio, sampling_rate, subtype='PCM_16')
 
 
 def add_noise(dataset_base_path: str,
                 first_noise_base_path: str,
                 second_noise_base_path: str,
+                sampling_rate: int,
                 output_path: str,
                 seed: int) -> None:
     """
@@ -193,13 +200,24 @@ def add_noise(dataset_base_path: str,
 
     os.makedirs(output_path, exist_ok=True)
 
-    audio_paths=audio_paths[:100]
-
     first_audio_set, second_audio_set, third_audio_set = divide_dataset(audio_paths)
 
-    add_external_noise(audio_paths=first_audio_set, noise_paths=first_noise_paths, SNR_LEVELS=SNR_LEVELS, output_path=output_path)
-    add_external_noise(audio_paths=second_audio_set, noise_paths=second_noise_paths, SNR_LEVELS=SNR_LEVELS, output_path=output_path)
-    add_white_noise(audio_paths=third_audio_set, SNR_LEVELS=SNR_LEVELS, output_path=output_path)
+    add_external_noise(audio_paths=first_audio_set,
+                        noise_paths=first_noise_paths,
+                        SNR_LEVELS=SNR_LEVELS,
+                        sampling_rate=sampling_rate,
+                        output_path=output_path)
+
+    add_external_noise(audio_paths=second_audio_set,
+                        noise_paths=second_noise_paths,
+                        SNR_LEVELS=SNR_LEVELS,
+                        sampling_rate=sampling_rate,
+                        output_path=output_path)
+
+    add_white_noise(audio_paths=third_audio_set,
+                        SNR_LEVELS=SNR_LEVELS,
+                        sampling_rate=sampling_rate,
+                        output_path=output_path)
 
 
 def main():
@@ -208,12 +226,14 @@ def main():
     parser.add_argument('--first_noise_base_path', type=str)
     parser.add_argument('--second_noise_base_path', type=str)
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--sampling_rate', type=int, default=16_000)
     parser.add_argument('--output_path', type=str)
     args = parser.parse_args()
 
     add_noise(dataset_base_path=args.dataset_base_path,
                 first_noise_base_path=args.first_noise_base_path,
                 second_noise_base_path=args.second_noise_base_path,
+                sampling_rate=args.sampling_rate,
                 output_path=args.output_path,
                 seed=args.seed)
 
