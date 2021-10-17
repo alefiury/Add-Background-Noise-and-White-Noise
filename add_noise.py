@@ -120,7 +120,11 @@ def add_external_noise(audio_paths: List[str],
 
         # Cut noisy audio
         if sample_noise.shape[0] > sample_audio.shape[0]:
-            sample_noise = sample_noise[:sample_audio.shape[0]]
+            extra = sample_noise.shape[0]-sample_audio.shape[0]
+            rand_start = random.randint(0, extra)
+            rand_end = rand_start+sample_audio.shape[0]
+            sample_noise = sample_noise[rand_start:rand_end]
+            # sample_noise = sample_noise[:sample_audio.shape[0]]
 
         augmented_audio = sample_audio + sample_noise
 
@@ -185,9 +189,11 @@ def add_noise(dataset_base_path: str,
     random.Random(seed).shuffle(audio_paths)
     first_noise_paths = glob.glob(os.path.join(first_noise_base_path, '**', '*.wav'), recursive=True)
     second_noise_paths = glob.glob(os.path.join(second_noise_base_path, '**', '*.wav'), recursive=True)
-    SNR_LEVELS = [0, 5, 10, 15, 20, 25]
+    SNR_LEVELS = [0, 5, 10, 15, 20]
 
     os.makedirs(output_path, exist_ok=True)
+
+    audio_paths=audio_paths[:100]
 
     first_audio_set, second_audio_set, third_audio_set = divide_dataset(audio_paths)
 
